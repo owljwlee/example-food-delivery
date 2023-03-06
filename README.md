@@ -198,14 +198,16 @@
 ### 완성된 모델
 ![image](https://user-images.githubusercontent.com/24615790/223145528-1eb36776-8c98-416e-8b47-7c0e479d9747.png)
 ### 기능 요구사항에 대한 검증
-1. 항공사관리자는 항공편 일정을 등록한다. (충족:schedulemgmt 서비스의 create schedule api를 통해 처리 가능)
-3. 항공사관리자는 등록된 항공편 일정을 취소할 수 있다. (충족:schedulemgmt 서비스의 delete schedule api를 통해 처리 가능)
-4. 고객이 항공편을 선택하여 결재까지 완료시 항공편 예약이 생성된다. (충족:reservationmgmt의 create reservation api를 통해 처리 가능)
-5. 예약 생성시 마일리지가 적립된다. (충족:reservationmgmt에서 pub.한 reservationCreated Event를 cusotomermgnt에서 sub.하여 처리)
-6. 고객이 예약한 항공편을 취소할 수 있다. (충족:reservationmgmt의 delete reservation api를 통해 처리 가능)
-7. 예약 취소시 예약결재시의 마일리지 적립이 취소된다. (충족:reservationmgmt에서 pub.한 reservationCanclled Event를 cusotomermgnt에서 sub.하여 처리)
-8. 예약상태가 변경될 때마다, 고객에게 알림을 보낸다. (충족:발생하는 모든 event를 notimgmt service가 sub.하여 상태변경시마다 알림 처리)
-9. 고객은 적립된 마일리지를 조회할 수 있다. (충족:customermgmt에서 제공하는 api를 통해 처리 가능)
+요구사항|충족여부|비고
+:---|:---|:---
+항공사관리자는 항공편 일정을 등록한다.|충족|schedulemgmt 서비스의 create schedule api를 통해 처리 가능
+항공사관리자는 등록된 항공편 일정을 취소할 수 있다.|충족|schedulemgmt 서비스의 delete schedule api를 통해 처리 가능
+고객이 항공편을 선택하여 결재까지 완료시 항공편 예약이 생성된다.|충족|reservationmgmt의 create reservation api를 통해 처리 가능
+예약 생성시 마일리지가 적립된다.|충족|reservationmgmt에서 pub.한 reservationCreated Event를 cusotomermgnt에서 sub.하여 처리
+고객이 예약한 항공편을 취소할 수 있다.|충족|reservationmgmt의 delete reservation api를 통해 처리 가능
+예약 취소시 예약결재시의 마일리지 적립이 취소된다.|충족|reservationmgmt에서 pub.한 reservationCanclled Event를 cusotomermgnt에서 sub.하여 처리
+예약상태가 변경될 때마다, 고객에게 알림을 보낸다.|충족|발생하는 모든 event를 notimgmt service가 sub.하여 상태변경시마다 알림 처리
+고객은 적립된 마일리지를 조회할 수 있다.|충족|customermgmt에서 제공하는 api를 통해 처리 가능
 
 ### 비기능 요구사항에 대한 검증
 1. 트랜잭션
