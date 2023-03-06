@@ -1,4 +1,3 @@
-![image](https://user-images.githubusercontent.com/487999/79708354-29074a80-82fa-11ea-80df-0db3962fb453.png)
 <img width="994" alt="image" src="https://user-images.githubusercontent.com/24615790/223068675-18f65545-553f-4893-aa1c-2f4144ae1ed5.png">
 
 # 예제 - 영화예약 시스템
