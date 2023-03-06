@@ -1,6 +1,7 @@
 <img width="994" alt="image" src="https://user-images.githubusercontent.com/24615790/223068675-18f65545-553f-4893-aa1c-2f4144ae1ed5.png">
 
-# 예제 - 영화예약 시스템
+# 항공 예약 시스템(MSA Air)
+
 
 본 예제는 MSA/DDD/Event Storming/EDA 를 포괄하는 분석/설계/구현/운영 전단계를 커버하도록 구성한 예제입니다.
 이는 클라우드 네이티브 애플리케이션의 개발에 요구되는 체크포인트들을 통과하기 위한 예시 답안을 포함합니다.
