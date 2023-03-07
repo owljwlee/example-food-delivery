@@ -221,7 +221,7 @@ cd reservationhis
 mvn spring-boot:run 
 ```
 
-## DDD 의 적용
+### DDD 의 적용
 
 * 각 서비스내에 도출된 핵심 Aggregate Root 객체를 Entity 로 선언처리(아래 예시는 reservation이다)
 ```
@@ -309,7 +309,7 @@ http localhost:8085/resevationHists/
 ```
 ---
 
-## 동기식 호출
+### 동기식 호출
 * 항공편 예약시 다음 2가지 무결성을 유지하기 위해, 항공편 예약시 관련정보를 가지고 있는 Micro Service를 동기식으로 호출하도록 한다.
   * MSA Air에 등록된 고객만 항공편 예약이 가능하다.
   * MSA Air에 등록된 항공편에 대해서만 예약이 가능하다.
@@ -352,7 +352,7 @@ http localhost:8085/resevationHists/
   }
 ```
 ---
-## Saga (Pub-Sub)
+### Saga (Pub-Sub)
 * 항공편 예약 Processs는 다음 task들로 구성
   1. 항공편예약:예약할 항공편을 조회하여 선택하여 결재
   2. 마일리지적립:항공편 결재에 따른 마일리지 적립
@@ -467,7 +467,7 @@ Vary: Access-Control-Request-Headers
 }
 ```
 ---
-## CQRS 
+### CQRS 
 * 고객은 항공편 예약 및 취소, 마일리지 적립 및 취소등의 모든 거래내역을 조회하고 싶어한다.현재 개별 정보들은 Database per service pattern으로 구현된 상태
 * 고객의 요구조건을 충족시키기 위해 CQRS pattern으로 별도의 Materialized View를 생성 유지한다.
 	- CQRS 구현 Service : reservationhist
@@ -618,7 +618,7 @@ Vary: Access-Control-Request-Headers
 }
 ```
 ---
-##Compensation
+### Compensation
 * `항공편 예약`건을 취소시, 이에 따라 `항공편 예약`으로 적립된 마일리지도 취소처리되어야 한다.
 * '항공편 예약 취소' Event 발생시, 이를 Sub.하여 마일리지 취소처리가 발생하도록 구현
 ```
