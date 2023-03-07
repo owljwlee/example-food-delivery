@@ -198,10 +198,10 @@ reservationhist|history 관리|reservationhist8085
 적용항목|구현여부|비고
 :---|:---|:---
 DDD적용|Y|
+동기식호출|Y|
 Saga (Pub-Sub)|Y| 
 CQRS|Y|
 Compensation & Correlation|Y|
-동기식호출|Y|
 
 각 서비스를 로컬에서 수행하는 방법
 ```
@@ -254,7 +254,6 @@ public class Reservation  {
 
         // Check if the customer exists
         try {
-        // Get request from Mileage
         msaair.external.Mileage mileage = ReservationmgmtApplication.applicationContext.getBean(msaair.external.MileageService.class).getMileage(
             getCustomerId()
         );
@@ -281,104 +280,40 @@ public class Reservation  {
     }
 }
 ```
-- Entity Pattern 과 Repository Pattern 을 적용하여 JPA 를 통하여 다양한 데이터소스 유형 (RDB or NoSQL) 에 대한 별도의 처리가 없도록 데이터 접근 어댑터를 자동 생성하기 위하여 Spring Data REST 의 RestRepository 를 적용하였다
+* Entity Pattern 과 Repository Pattern 을 적용하여 JPA 를 통하여 다양한 데이터소스 유형 (RDB or NoSQL) 에 대한 별도의 처리가 없도록 데이터 접근 어댑터를 자동 생성하기 위하여 Spring Data REST 의 RestRepository 를 적용하였다
 ```
-package fooddelivery;
+package msaair.domain;
 
+import msaair.domain.*;
 import org.springframework.data.repository.PagingAndSortingRepository;
+import org.springframework.data.rest.core.annotation.RepositoryRestResource;
 
-public interface 결제이력Repository extends PagingAndSortingRepository<결제이력, Long>{
+@RepositoryRestResource(collectionResourceRel="reservations", path="reservations")
+public interface ReservationRepository extends PagingAndSortingRepository<Reservation, Long>{
 }
 ```
-- 적용 후 REST API 의 테스트
+* 적용 후 REST API 테스트 수행
 ```
-# app 서비스의 주문처리
-http localhost:8081/orders item="통닭"
+#신규고객 등록:고객번호는 자동채번
+http localhost:8082/mileages/ mileage=2000 
 
-# store 서비스의 배달처리
-http localhost:8083/주문처리s orderId=1
+#신규 항공편 일정 등록
+http localhost:8081/schedules/ departure=seoul arrival=busan departtureTime=2023-04-01 09:00:00 arrivalTime=2023-04-01 10:30:00
 
-# 주문 상태 확인
-http localhost:8081/orders/1
+#신규 항공편 예약 등록
+http localhost:8083/reservations/ customerId=1 peopleNo=3 scheduleId=2 mileageToIncrease=10000
 
-```
-
-
-## 폴리글랏 퍼시스턴스
-
-앱프런트 (app) 는 서비스 특성상 많은 사용자의 유입과 상품 정보의 다양한 콘텐츠를 저장해야 하는 특징으로 인해 RDB 보다는 Document DB / NoSQL 계열의 데이터베이스인 Mongo DB 를 사용하기로 하였다. 이를 위해 order 의 선언에는 @Entity 가 아닌 @Document 로 마킹되었으며, 별다른 작업없이 기존의 Entity Pattern 과 Repository Pattern 적용과 데이터베이스 제품의 설정 (application.yml) 만으로 MongoDB 에 부착시켰다
+#예약등록 및 취소, 마일리 적립 및 취소 등의 모든 히스토리를 조회한다.
+http localhost:8085/resevationHists/
 
 ```
-# Order.java
+---
 
-package fooddelivery;
-
-@Document
-public class Order {
-
-    private String id; // mongo db 적용시엔 id 는 고정값으로 key가 자동 발급되는 필드기 때문에 @Id 나 @GeneratedValue 를 주지 않아도 된다.
-    private String item;
-    private Integer 수량;
-
-}
-
-
-# 주문Repository.java
-package fooddelivery;
-
-public interface 주문Repository extends JpaRepository<Order, UUID>{
-}
-
-# application.yml
-
-  data:
-    mongodb:
-      host: mongodb.default.svc.cluster.local
-    database: mongo-example
-
-```
-
-## 폴리글랏 프로그래밍
-
-고객관리 서비스(customer)의 시나리오인 주문상태, 배달상태 변경에 따라 고객에게 카톡메시지 보내는 기능의 구현 파트는 해당 팀이 python 을 이용하여 구현하기로 하였다. 해당 파이썬 구현체는 각 이벤트를 수신하여 처리하는 Kafka consumer 로 구현되었고 코드는 다음과 같다:
-```
-from flask import Flask
-from redis import Redis, RedisError
-from kafka import KafkaConsumer
-import os
-import socket
-
-
-# To consume latest messages and auto-commit offsets
-consumer = KafkaConsumer('fooddelivery',
-                         group_id='',
-                         bootstrap_servers=['localhost:9092'])
-for message in consumer:
-    print ("%s:%d:%d: key=%s value=%s" % (message.topic, message.partition,
-                                          message.offset, message.key,
-                                          message.value))
-
-    # 카톡호출 API
-```
-
-파이선 애플리케이션을 컴파일하고 실행하기 위한 도커파일은 아래와 같다 (운영단계에서 할일인가? 아니다 여기 까지가 개발자가 할일이다. Immutable Image):
-```
-FROM python:2.7-slim
-WORKDIR /app
-ADD . /app
-RUN pip install --trusted-host pypi.python.org -r requirements.txt
-ENV NAME World
-EXPOSE 8090
-CMD ["python", "policy-handler.py"]
-```
-
-
-## 동기식 호출 과 Fallback 처리
-
-분석단계에서의 조건 중 하나로 주문(app)->결제(pay) 간의 호출은 동기식 일관성을 유지하는 트랜잭션으로 처리하기로 하였다. 호출 프로토콜은 이미 앞서 Rest Repository 에 의해 노출되어있는 REST 서비스를 FeignClient 를 이용하여 호출하도록 한다. 
-
-- 결제서비스를 호출하기 위하여 Stub과 (FeignClient) 를 이용하여 Service 대행 인터페이스 (Proxy) 를 구현 
-
+## 동기식 호출
+* 항공편 예약시 다음 2가지 무결성을 유지하기 위해, 항공편 예약시 관련정보를 가지고 있는 Micro Service를 동기식으로 호출하도록 한다.
+  * MSA Air에 등록된 고객만 항공편 예약이 가능하다.
+  * MSA Air에 등록된 항공편에 대해서만 예약이 가능하다.
+* 호출 프로토콜은 이미 앞서 Rest Repository 에 의해 노출되어있는 REST 서비스를 FeignClient 를 이용하여 호출한다. 
 ```
 # (app) 결제이력Service.java
 
