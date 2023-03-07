@@ -194,6 +194,14 @@ customermgmt|고객 mileage 적립관리|customermgmt|8082
 notimgmt|고객알림 관리|notimgmt|8084
 reservationhist|history 관리|reservationhist8085
 
+적용항목|구현여부|비고
+:---|:---|:---
+DDD적용|Y|
+Saga (Pub-Sub)|Y| 
+CQRS|Y|
+Compensation & Correlation|Y|
+동기식호출|Y|
+
 각 서비스를 로컬에서 수행하는 방법
 ```
 cd schedulemgmt
@@ -778,6 +786,10 @@ Concurrency:		       96.02
 ```
 
 배포기간 동안 Availability 가 변화없기 때문에 무정지 재배포가 성공한 것으로 확인됨.
+
+### Loggregation / Monitoring
+EFK stack 설치후 모니터링 수행
+
 
 
 # 신규 개발 조직의 추가
