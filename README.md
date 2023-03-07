@@ -358,14 +358,14 @@ http localhost:8085/resevationHists/
   2. 마일리지적립:항공편 결재에 따른 마일리지 적립
   3. 고객알림발송:고객에게 관련 사시 알림
   4. 고객의 히스토리에 등록
-* 모든 Task들이 한 개의 엄격한 Transaction으로 묶일 필요가 없다고 판단. 각각의 Task들을 별도의 서비스에 구현
+* 모든 Task들이 한 개의 엄격한 Transaction으로 묶일 필요가 없다고 판단. 각각의 Task들을 별도 Service로 구현
   Task|Service name|comment
   :---|:---|:---
   항공편예약|reservationmgmt|
   마일리지적립|customermgmt|
   고객알림발송|notimgmt|
   고객의 히스토림에 등록|reservationhist|
-* 각각의 Task들가 연결을 'Event pub./sub.'으로 구현하여. 각각의 서비스들 decouping 처리
+* 각각의 Task들가 연결을 'Event pub./sub.'으로 구현하여.Service들간 decouping 처리
   Event Name|scheduleMgmt|reservationMgmt|customerMgmt|notiMgmt|reservationhist|
   :---|:---|:---|:---|:---|:---
   ReservationCreated||Pub.|Sub.|Sub.|Sub.
@@ -465,7 +465,157 @@ Vary: Access-Control-Request-Headers
         "totalPages": 1
     }
 }
-```  
+```
+---
+## CQRS 
+* 고객은 항공편 예약 및 취소, 마일리지 적립 및 취소등의 모든 거래내역을 조회하고 싶어한다.현재 개별 정보들은 Database per service pattern으로 구현된 상태
+* 고객의 요구조건을 충족시키기 위해 CQRS pattern으로 별도의 Materialized View를 생성 유지한다.
+	- CQRS 구현 Service : reservationhist
+* 구현
+```
+ public void whenReservationCreated_then_CREATE_1 (@Payload ReservationCreated reservationCreated) {
+        try {
+            if (!reservationCreated.validate()) return;
+            // view 객체 생성
+            ResevationHist resevationHist = new ResevationHist();
+
+            // view 객체에 이벤트의 Value 를 set 함
+            resevationHist.setCustomerId(reservationCreated.getCustomerId());
+            resevationHist.setScheduleId(reservationCreated.getScheduleId());
+            resevationHist.setEventType("예약등록");
+            nextId++;
+            resevationHist.setId(nextId);
+            // view 레파지 토리에 save
+            resevationHistRepository.save(resevationHist);
+
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+    @StreamListener(KafkaProcessor.INPUT)
+    public void whenReservationCancelled_then_CREATE_2 (@Payload ReservationCancelled reservationCancelled) {
+        try {
+
+            if (!reservationCancelled.validate()) return;
+
+            // view 객체 생성
+            ResevationHist resevationHist = new ResevationHist();
+            // view 객체에 이벤트의 Value 를 set 함
+            resevationHist.setCustomerId(reservationCancelled.getCustomerId());
+            resevationHist.setScheduleId(reservationCancelled.getScheduleId());
+            resevationHist.setEventType("예약취소");
+            nextId++;
+            resevationHist.setId(nextId);
+            // view 레파지 토리에 save
+            resevationHistRepository.save(resevationHist);
+
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+    @StreamListener(KafkaProcessor.INPUT)
+    public void whenMileageincreased_then_CREATE_3 (@Payload Mileageincreased mileageincreased) {
+        try {
+
+            if (!mileageincreased.validate()) return;
+
+            // view 객체 생성
+            ResevationHist resevationHist = new ResevationHist();
+            // view 객체에 이벤트의 Value 를 set 함
+            resevationHist.setCustomerId(mileageincreased.getCustomerId());
+            resevationHist.setMileage(mileageincreased.getMileage());
+            resevationHist.setEventType("마일리지적립");
+            nextId++;
+            resevationHist.setId(nextId);
+            // view 레파지 토리에 save
+            resevationHistRepository.save(resevationHist);
+
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+    @StreamListener(KafkaProcessor.INPUT)
+    public void whenMileageDecreased_then_CREATE_4 (@Payload MileageDecreased mileageDecreased) {
+        try {
+
+            if (!mileageDecreased.validate()) return;
+
+            // view 객체 생성
+            ResevationHist resevationHist = new ResevationHist();
+            // view 객체에 이벤트의 Value 를 set 함
+            resevationHist.setCustomerId(mileageDecreased.getCustomerId());
+            resevationHist.setMileage(mileageDecreased.getMileage());
+            resevationHist.setEventType("마일리지적립취소");
+            nextId++;
+            resevationHist.setId(nextId);
+            // view 레파지 토리에 save
+            resevationHistRepository.save(resevationHist);
+
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }  
+```
+* 처리결과
+gitpod /workspace/msaair (main) $ http localhost:8085/resevationHists/
+HTTP/1.1 200 
+Connection: keep-alive
+Content-Type: application/hal+json
+Date: Tue, 07 Mar 2023 01:46:39 GMT
+Keep-Alive: timeout=60
+Transfer-Encoding: chunked
+Vary: Origin
+Vary: Access-Control-Request-Method
+Vary: Access-Control-Request-Headers
+{
+    "_embedded": {
+        "resevationHists": [
+            {
+                "_links": {
+                    "resevationHist": {
+                        "href": "http://localhost:8085/resevationHists/1"
+                    },
+                    "self": {-
+                        "href": "http://localhost:8085/resevationHists/1"
+                    }
+                },
+                "customerId": 1,
+                "eventType": "예약등록",
+                "mileage": null,
+                "scheduleId": 2
+            },
+            {
+                "_links": {
+                    "resevationHist": {
+                        "href": "http://localhost:8085/resevationHists/2"
+                    },
+                    "self": {
+                        "href": "http://localhost:8085/resevationHists/2"
+                    }
+                },
+                "customerId": 1,
+                "eventType": "마일리지적립",
+                "mileage": 21000,
+                "scheduleId": null
+            }
+        ]
+    },
+    "_links": {
+        "profile": {
+            "href": "http://localhost:8085/profile/resevationHists"
+        },
+        "self": {
+            "href": "http://localhost:8085/resevationHists/"
+        }
+    },
+    "page": {
+        "number": 0,
+        "size": 20,
+        "totalElements": 2,
+        "totalPages": 1
+    }
+}
+```
 
 
 ---
