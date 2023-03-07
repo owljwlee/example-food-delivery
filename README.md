@@ -789,8 +789,7 @@ Concurrency:		       96.02
 
 ### Loggregation / Monitoring
 EFK stack 설치후 모니터링 수행
-
-
+![image](https://user-images.githubusercontent.com/24615790/223363581-5ad19711-b855-4ee8-a03b-0052ad88c6a7.png)
 
 # 신규 개발 조직의 추가
 
