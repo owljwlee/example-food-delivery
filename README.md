@@ -193,7 +193,7 @@ schedulemgmt|항공편 일정 관리|schedulemgmt|8081
 reservationmgmt|항공편 예약 관리|reservationmgmt|8083
 customermgmt|고객 mileage 적립관리|customermgmt|8082
 notimgmt|고객알림 관리|notimgmt|8084
-reservationhist|history 관리|reservationhist8085
+reservationhist|history 관리|reservationhist|8085
 
 적용항목|구현여부|비고
 :---|:---|:---
@@ -353,8 +353,46 @@ http localhost:8085/resevationHists/
 ```
 ---
 ## Saga (Pub-Sub)
-* ACID가 엄격히 유지될 필요가 없는, 연결은 
+* 항공편 예약은 다음 task들로 구서
+  1. 항공편예약:예약할 항공편을 조회하여 선택하여 결재
+  2. 마일리지적립:항공편 결재에 따른 마일리지 적립
+  3. 고객알림발송:고객에게 관련 사시 알림
+  4. 고객의 히스토리에 등록
+* 모든 Task들이 한 개의 엄격한 Transaction으로 묶일 필요가 없다고 판단. 각각의 Task들을 별도의 서비스에 구현
+  Task|Service name|comment
+  :---|:---|:---
+  항공편예약|reservationmgmt|
+  마일리지적립|customermgmt|
+  고객알림발송|notimgmt|
+  고객의 히스토림에 등록|reservationhist|
+* 각각의 Task들가 연결을 'Event pub./sub.'으로 구현하여. 각각의 서비스들 decouping 처리
+  Event Name|scheduleMgmt|reservationMgmt|customerMgmt|notiMgmt|reservationhist|
+  :---|:---|:---|:---|:---|:---
+  ReservationCreated||Pub.|Sub.|Sub.|Sub.
+  MileageIncreased|||Pub.|Sub.|Sub.
+  ReservationCancelled||Pub.|Sub.|Sub.|Sub.
+  MileageDecreased|||Pub.|Sub.|Sub.
+* Event Pub./Sub. 기능 구현
+  **예시 소스는 '항공편예약 이벤트 Sub.해서 마일리지 적립후 다시 마일리지 적립 Event.를 Pub.' 하는 부분.** 
+  ```
+    public static void accumulateMileage(ReservationCreated reservationCreated){
+        /** Example 2:  finding and process */
+        repository().findById(reservationCreated.getCustomerId()).ifPresent(mileage->{
+            //1. 마일리지를 적립한다.
+            mileage.setMileage(mileage.getMileage() + reservationCreated.getMileageToIncrease() );
+            repository().save(mileage);
+            //2. Mileageincreased 이벤트를 새로 발생시킨다.
+            Mileage aMileage = new Mileage();
+            aMileage.setCustomerId(mileage.getCustomerId());
+            aMileage.setMileage(mileage.getMileage());
+            Mileageincreased mileageincreased = new Mileageincreased(aMileage);
+            mileageincreased.publishAfterCommit();
+            }
+         );
+    }  
+  ```
 
+---
 # 운영
 항목|구현여부|비고
 :---|:---|:---
