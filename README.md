@@ -827,13 +827,61 @@ schedulemgmt                  ClusterIP      10.100.236.254   <none>            
 ```
 
 * **Gateway를 서비스 접급 정상처리 확인**
-![image](https://hhttps://user-images.githubusercontent.com/24615790/223391959-32259257-0bdd-4c1b-85cc-2dc43d55f0fc.png)
+![image](https://user-images.githubusercontent.com/24615790/223391959-32259257-0bdd-4c1b-85cc-2dc43d55f0fc.png)
 
+---
 ### Autoscale (HPA) ###
-성수기에는 영역
+* 성수기에는 특정 기능(항공편 예약)에 대한 트래픽이 폭발적으로 증가할 수 있다. scalability가 요구되는 서비스에 대해서 auto scale 설정
+```
+gitpod /workspace/msaair (main) $ kubectl get hpa
+NAME              REFERENCE                    TARGETS   MINPODS   MAXPODS   REPLICAS   AGE
+reservationmgmt   Deployment/reservationmgmt   3%/30%    1         5         1          4h47m
+```
+* siege 서비스를 이용하여 대상 서비스에 대해서 부하 발생 처리시 scale up이 발생하는 것 확인
+```
+HTTP/1.1 200     0.13 secs:     460 bytes ==> GET  /reservations/
+HTTP/1.1 200     0.06 secs:     460 bytes ==> GET  /reservations/
+HTTP/1.1 200     0.04 secs:     460 bytes ==> GET  /reservations/
+HTTP/1.1 200     0.18 secs:     460 bytes ==> GET  /reservations/
+HTTP/1.1 200     0.04 secs:     460 bytes ==> GET  /reservations/
+HTTP/1.1 200     0.06 secs:     460 bytes ==> GET  /reservations/
+
+Lifting the server siege...
+Transactions:                  12343 hits
+Availability:                 100.00 %
+Elapsed time:                  39.10 secs
+Data transferred:              10.76 MB
+Response time:                  0.06 secs
+Transaction rate:             315.68 trans/sec
+Throughput:                     0.28 MB/sec
+Concurrency:                   19.74
+Successful transactions:       12343
+Failed transactions:               0
+Longest transaction:            0.45
+Shortest transaction:           0.00
+
+gitpod /workspace/msaair (main) $ kubectl get pods -w
+NAME                               READY   STATUS    RESTARTS   AGE
+customermgmt-98c4cfcfc-pqpwx       1/1     Running   0          100m
+gateway-67977d88f8-jn2rh           1/1     Running   0          116m
+my-kafka-0                         1/1     Running   0          105m
+my-kafka-zookeeper-0               1/1     Running   0          105m
+notimgmt-65d6c5bf45-hsjfq          1/1     Running   0          95m
+reservationhist-574585f56d-b8vm5   1/1     Running   0          94m
+reservationmgmt-6dbf9c9449-4tdlf   1/1     Running   0          4m30s
+reservationmgmt-6dbf9c9449-bv9gz   1/1     Running   0          4m45s
+reservationmgmt-6dbf9c9449-ljwwk   1/1     Running   0          4m45s
+reservationmgmt-6dbf9c9449-lqhx8   1/1     Running   0          7m33s
+reservationmgmt-6dbf9c9449-mchf6   1/1     Running   0          5m15s
+schedulemgmt-5f69f79b6f-vdj8h      1/1     Running   0          5m57s
+siege                              1/1     Running   0          17m
+```
 
 
 
+
+
+---
 ### Persistence Volume/ConfigMap/Secret
 
 * **persistent volume**
@@ -894,13 +942,14 @@ OldReplicaSets:  <none>
 NewReplicaSet:   schedulemgmt-5f69f79b6f (1/1 replicas created)
 Events:          <none>
 ```
+---
+### Apply Service Mesh : istio-gateway ###
 
-### Apply Service Mesh : istio-gateway
 istio 설치후, Microservice가 설치된 namespace(default)의 istio-enabled 설정후 재기동 수행
 재기동 후 sidecar 정상 탑재확인
 ![image](https://user-images.githubusercontent.com/24615790/223364367-b316a6a9-b4be-4aa1-b9dd-0f929d5c81a8.png)
 
-
+---
 ### Loggregation / Monitoring
 EFK stack 설치후 모니터링 수행
 ![image](https://user-images.githubusercontent.com/24615790/223363581-5ad19711-b855-4ee8-a03b-0052ad88c6a7.png)
