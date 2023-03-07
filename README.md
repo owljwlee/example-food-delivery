@@ -358,16 +358,51 @@ http localhost:8085/resevationHists/
 # 운영
 항목|구현여부|비고
 :---|:---|:---
-Gateway/Ingress|Y|spring gateway 사용
-Deploy/Pipeline|Y|• Image를 생성하여 docker.io에 push<br>• docker.io의 image를 사용하여 aws eks에 배포
+Deploy|Y|• Image를 생성하여 docker.io에 push<br>• docker.io의 image를 사용하여 aws eks에 배포
+Gateway|Y|spring gateway 사용
 Autoscale (HPA)|Y|• 특정 Service(reservationmgmt)에 대해서 AutoScale 설정<br>• 트래픽 과다발생시 scale out 확인
 Self-healing|Y|• Liveness probe 설정하여 배포<br>• HttpGet ProbeAction을 통해 Liveness 값 반환 확인 
 Zero-downtime deploy|Y|• Readiness probe 설정하여 배포<br>• 신규버젼 배포시 무정지 배포 확인
 Persistence Volume/ConfigMap/Secret|Y|• 생성후 서비스 마운트 처리
 Apply Service Mesh|Y|• Micro service들이 배포된 namespace에 Initio-enabled 처리<br>• Micro service 재기동하여 sidecar injection 처리
 Loggregation / Monitoring|Y|EFK stack 설치하여, 로그모니터링 처리
+---
+### Deploy ###
+* **이미지를 생성해서 docker.io에 push한다.**
+```
+gitpod /workspace/msaair (main) $ docker images
+REPOSITORY                  TAG                IMAGE ID       CREATED        SIZE
+owljw/reservationmgmt       4                  00f71ff365c9   16 hours ago   417MB
+owljw/reservationmgmt       3                  fbdb9d2a4393   17 hours ago   417MB
+owljw/reservationmgmt       2                  e6b148cbf6cd   17 hours ago   417MB
+owljw/gateway               1                  611c7abde2ee   18 hours ago   130MB
+owljw/reservationhist       1                  2b3eafd72d2b   18 hours ago   417MB
+owljw/notimgmt              1                  8de93786b2df   18 hours ago   417MB
+owljw/customermgmt          1                  ee6d6268bb28   18 hours ago   417MB
+owljw/reservationmgmt       1                  643513d571f0   18 hours ago   417MB
+owljw/schedulemgmt          1                  504b7b3c30fb   20 hours ago   417MB
+confluentinc/cp-kafka       latest             da23a46211ad   2 weeks ago    832MB
+confluentinc/cp-zookeeper   latest             8a091961522e   2 weeks ago    832MB
+openjdk                     15-jdk-alpine      f02adfce91a2   2 years ago    343MB
+openjdk                     8u212-jdk-alpine   a3562aa0b991   3 years ago    105MB
+```
 
-
+* **대상 이미지를 eks에 배포한다.**
+```
+gitpod /workspace/msaair (main) $ kubectl get pods
+NAME                               READY   STATUS    RESTARTS      AGE
+customermgmt-98c4cfcfc-82nk5       2/2     Running   7 (11h ago)   15h
+gateway-67977d88f8-ttr74           2/2     Running   0             14h
+my-kafka-0                         1/1     Running   0             18h
+my-kafka-zookeeper-0               1/1     Running   0             18h
+notimgmt-65d6c5bf45-cx5bw          2/2     Running   7 (11h ago)   14h
+order-5f88dff96d-v4ddz             2/2     Running   2 (9h ago)    9h
+reservationhist-574585f56d-npmtc   2/2     Running   7 (11h ago)   14h
+reservationmgmt-76bc697969-fmcdj   2/2     Running   0             11h
+schedulemgmt-5f69f79b6f-x2fjk      2/2     Running   7 (11h ago)   14h
+siege                              1/1     Running   0             16h
+```
+---
 ### Gateway ###
 * **Gateway 배포 및 External IP 확인**
 ```
