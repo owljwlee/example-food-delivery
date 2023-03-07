@@ -560,6 +560,34 @@ hystrix:
     }
 ```
 
+### Gateway ###
+* **Gateway 배포 및 External IP 확인**
+```
+gitpod /workspace/msaair (main) $ kubectl get pods
+NAME                               READY   STATUS    RESTARTS      AGE
+customermgmt-98c4cfcfc-pqpwx       1/1     Running   0             76m
+gateway-67977d88f8-jn2rh           1/1     Running   0             91m
+my-kafka-0                         1/1     Running   0             81m
+my-kafka-zookeeper-0               1/1     Running   0             81m
+notimgmt-65d6c5bf45-hsjfq          1/1     Running   0             71m
+reservationhist-574585f56d-b8vm5   1/1     Running   0             70m
+reservationmgmt-76bc697969-rnrvx   1/1     Running   0             42m
+schedulemgmt-77fd55d468-v7p72      1/1     Running   9 (86m ago)   110m
+gitpod /workspace/msaair (main) $ kubectl get services
+NAME                          TYPE           CLUSTER-IP       EXTERNAL-IP                                                                   PORT(S)                      AGE
+customermgmt                  ClusterIP      10.100.217.51    <none>                                                                        8080/TCP                     78m
+gateway                       LoadBalancer   10.100.189.64    abc9cccd4c17d41af9bf9e37f59548a2-256813655.ap-southeast-2.elb.amazonaws.com   8080:32457/TCP               94m
+kubernetes                    ClusterIP      10.100.0.1       <none>                                                                        443/TCP                      5h23m
+my-kafka                      ClusterIP      10.100.127.183   <none>                                                                        9092/TCP                     83m
+my-kafka-headless             ClusterIP      None             <none>                                                                        9092/TCP,9093/TCP            83m
+my-kafka-zookeeper            ClusterIP      10.100.122.95    <none>                                                                        2181/TCP,2888/TCP,3888/TCP   83m
+my-kafka-zookeeper-headless   ClusterIP      None             <none>                                                                        2181/TCP,2888/TCP,3888/TCP   83m
+notimgmt                      ClusterIP      10.100.7.149     <none>                                                                        8080/TCP                     76m
+reservationhist               ClusterIP      10.100.27.171    <none>                                                                        8080/TCP                     75m
+reservationmgmt               ClusterIP      10.100.34.24     <none>                                                                        8080/TCP                     77m
+schedulemgmt                  ClusterIP      10.100.236.254   <none>                                                                        8080/TCP    
+```
+
 * **Gateway를 서비스 접근 정상처리 확인**
 ![image](https://user-images.githubusercontent.com/24615790/223391959-32259257-0bdd-4c1b-85cc-2dc43d55f0fc.png)
 ---
