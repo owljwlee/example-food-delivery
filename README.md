@@ -510,7 +510,7 @@ http localhost:8080/orders     # 모든 주문의 상태가 "배송됨"으로 �
 Gateway/Ingress|Y|spring gateway 사용
 Deploy/Pipeline|Y|• Image를 생성하여 docker.io에 push<br>• docker.io의 image를 사용하여 aws eks에 배포
 Autoscale (HPA)|Y|• 특정 Service(reservationmgmt)에 대해서 AutoScale 설정<br>• 트래픽 과다발생시 scale out 확인
-Self-healing|Y|• Liveness probe 설정하여 배포 
+Self-healing|Y|• Liveness probe 설정하여 배포<br>• HttpGet ProbeAction을 통해 Liveness 값 반환 확인 
 Zero-downtime deploy|Y|• Readiness probe 설정하여 배포<br>• 신규버젼 배포시 무정지 배포 확인
 Persistence Volume/ConfigMap/Secret|Y|
 Apply Service Mesh|Y|• Micro service들이 배포된 namespace에 Initio-enabled 처리<br>• Micro service 재기동하여 sidecar injection 처리
@@ -594,6 +594,70 @@ schedulemgmt                  ClusterIP      10.100.236.254   <none>            
 ---
 
 ### Self-healing
+* deployment.yaml에 liveness probe 설정 확인
+```
+    spec:
+      containers:
+        - name: reservationmgmt
+          image: owljw/reservationmgmt:3
+          ports:
+            - containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: '/actuator/health'
+              port: 8080
+            initialDelaySeconds: 10
+            timeoutSeconds: 2
+            periodSeconds: 5
+            failureThreshold: 10
+          livenessProbe:
+            httpGet:
+              path: '/actuator/health'
+              port: 8080
+            initialDelaySeconds: 120
+            timeoutSeconds: 2
+            periodSeconds: 5
+            failureThreshold: 5
+```
+* 확인대상 서비스를, gateway를 경유하지 않고 직접접근 하기위해 LoadBalancer Service 생성
+```
+gitpod /workspace/msaair/reservationmgmt (main) $ kubectl get services
+NAME                          TYPE           CLUSTER-IP       EXTERNAL-IP                                                                    PORT(S)                      AGE
+customermgmt                  ClusterIP      10.100.217.51    <none>                                                                         8080/TCP                     8h
+gateway                       LoadBalancer   10.100.189.64    abc9cccd4c17d41af9bf9e37f59548a2-256813655.ap-southeast-2.elb.amazonaws.com    8080:32457/TCP               8h
+kubernetes                    ClusterIP      10.100.0.1       <none>                                                                         443/TCP                      12h
+my-kafka                      ClusterIP      10.100.127.183   <none>                                                                         9092/TCP                     8h
+my-kafka-headless             ClusterIP      None             <none>                                                                         9092/TCP,9093/TCP            8h
+my-kafka-zookeeper            ClusterIP      10.100.122.95    <none>                                                                         2181/TCP,2888/TCP,3888/TCP   8h
+my-kafka-zookeeper-headless   ClusterIP      None             <none>                                                                         2181/TCP,2888/TCP,3888/TCP   8h
+notimgmt                      ClusterIP      10.100.7.149     <none>                                                                         8080/TCP                     8h
+order                         LoadBalancer   10.100.237.225   a802836baf0d844a6beaca36c8cd1d6c-1366013942.ap-southeast-2.elb.amazonaws.com   8080:31434/TCP               19m
+reservationhist               ClusterIP      10.100.27.171    <none>                                                                         8080/TCP                     8h
+reservationmgmt               ClusterIP      10.100.34.24     <none>                                                                         8080/TCP                     8h
+reservationmgmt2              LoadBalancer   10.100.24.54     a5c371a4b0a3a404ea728b766885c43c-811919289.ap-southeast-2.elb.amazonaws.com    8080:31129/TCP               41m
+schedulemgmt                  ClusterIP      10.100.236.254   <none>                                                                         8080/TCP                     8h
+```
+
+* 확인대상 서비스의 Liveness Probe 값 확인
+```
+gitpod /workspace/msaair/reservationmgmt (main) $ http a5c371a4b0a3a404ea728b766885c43c-811919289.ap-southeast-2.elb.amazonaws.com:8080/actuator/health
+HTTP/1.1 200 OK
+content-type: application/vnd.spring-boot.actuator.v3+json
+date: Tue, 07 Mar 2023 12:46:07 GMT
+server: istio-envoy
+transfer-encoding: chunked
+x-envoy-decorator-operation: reservationmgmt.default.svc.cluster.local:8080/*
+x-envoy-upstream-service-time: 1
+
+{
+    "groups": [
+        "liveness",
+        "readiness"
+    ],
+    "status": "UP"
+}
+```
+
 
 ---
 ### Zero-downtime deploy (Readiness probe)
