@@ -652,8 +652,64 @@ schedulemgmt                  ClusterIP      10.100.236.254   <none>            
 
 * **Gateway를 서비스 접근 정상처리 확인**
 ![image](https://user-images.githubusercontent.com/24615790/223391959-32259257-0bdd-4c1b-85cc-2dc43d55f0fc.png)
-
 ---
+
+### Zero-downtime deploy (Readiness probe)
+* 신규 버젼의 이미지 배포시 무중단 처리를 위해 수행.
+* 이미지의 version을 변경하여, docker.io에 push
+```
+gitpod /workspace/msaair (main) $ docker images
+REPOSITORY                  TAG                IMAGE ID       CREATED       SIZE
+owljw/reservationmgmt       4                  00f71ff365c9   5 hours ago   417MB
+owljw/reservationmgmt       3                  fbdb9d2a4393   6 hours ago   417MB
+owljw/reservationmgmt       2                  e6b148cbf6cd   6 hours ago   417MB
+owljw/gateway               1                  611c7abde2ee   7 hours ago   130MB
+owljw/reservationhist       1                  2b3eafd72d2b   7 hours ago   417MB
+owljw/notimgmt              1                  8de93786b2df   7 hours ago   417MB
+owljw/customermgmt          1                  ee6d6268bb28   7 hours ago   417MB
+owljw/reservationmgmt       1                  643513d571f0   7 hours ago   417MB
+owljw/schedulemgmt          1                  504b7b3c30fb   9 hours ago   417MB
+confluentinc/cp-kafka       latest             da23a46211ad   2 weeks ago   832MB
+confluentinc/cp-zookeeper   latest             8a091961522e   2 weeks ago   832MB
+openjdk                     15-jdk-alpine      f02adfce91a2   2 years ago   343MB
+openjdk                     8u212-jdk-alpine   a3562aa0b991   3 years ago   105MB
+```
+* deployment.yaml에 Readiness Probe 설정 확인 및 신규버젼으로 배포되도록 버젼 변경
+```
+        - name: reservationmgmt
+          image: owljw/reservationmgmt:4
+          ports:
+            - containerPort: 8080
+          resources:
+            requests:
+              cpu: "200m"
+          readinessProbe:
+            httpGet:
+              path: '/actuator/health'
+              port: 8080
+            initialDelaySeconds: 10
+            timeoutSeconds: 2
+            periodSeconds: 5
+            failureThreshold: 10
+```         
+* 배포중 siege를 통해 대상 서비스에 부하발생 처리 --> Availability 100% 확인
+```
+Lifting the server siege...
+Transactions:                  10548 hits
+Availability:                 100.00 %
+Elapsed time:                  39.74 secs
+Data transferred:               4.63 MB
+Response time:                  0.07 secs
+Transaction rate:             265.43 trans/sec
+Throughput:                     0.12 MB/sec
+Concurrency:                   17.30
+Successful transactions:       10548
+Failed transactions:               0
+Longest transaction:            0.63
+Shortest transaction:           0.01
+```
+---
+
 ### Autoscale (HPA) ###
 * 성수기에는 특정 기능(항공편 예약)에 대한 트래픽이 폭발적으로 증가할 수 있다. scalability가 요구되는 서비스에 대해서 auto scale 설정
 ```
