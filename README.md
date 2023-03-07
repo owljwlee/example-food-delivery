@@ -559,6 +559,7 @@ hystrix:
         }
     }
 ```
+---
 
 ### Gateway ###
 * **Gateway 배포 및 External IP 확인**
@@ -592,6 +593,9 @@ schedulemgmt                  ClusterIP      10.100.236.254   <none>            
 ![image](https://user-images.githubusercontent.com/24615790/223391959-32259257-0bdd-4c1b-85cc-2dc43d55f0fc.png)
 ---
 
+### Self-healing
+
+---
 ### Zero-downtime deploy (Readiness probe)
 * 신규 버젼의 이미지 배포시 무중단 처리를 위해 수행.
 * 이미지의 version을 변경하여, docker.io에 push
