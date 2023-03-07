@@ -353,7 +353,7 @@ http localhost:8085/resevationHists/
 ```
 ---
 ## Saga (Pub-Sub)
-* 항공편 예약은 다음 task들로 구서
+* 항공편 예약 Processs는 다음 task들로 구서
   1. 항공편예약:예약할 항공편을 조회하여 선택하여 결재
   2. 마일리지적립:항공편 결재에 따른 마일리지 적립
   3. 고객알림발송:고객에게 관련 사시 알림
@@ -374,13 +374,14 @@ http localhost:8085/resevationHists/
   MileageDecreased|||Pub.|Sub.|Sub.
 * Event Pub./Sub. 기능 구현
   **예시 소스는 '항공편예약 이벤트 Sub.해서 마일리지 적립후 다시 마일리지 적립 Event.를 Pub.' 하는 부분.** 
-  ```
+```
     public static void accumulateMileage(ReservationCreated reservationCreated){
         /** Example 2:  finding and process */
         repository().findById(reservationCreated.getCustomerId()).ifPresent(mileage->{
             //1. 마일리지를 적립한다.
             mileage.setMileage(mileage.getMileage() + reservationCreated.getMileageToIncrease() );
             repository().save(mileage);
+            
             //2. Mileageincreased 이벤트를 새로 발생시킨다.
             Mileage aMileage = new Mileage();
             aMileage.setCustomerId(mileage.getCustomerId());
@@ -390,7 +391,82 @@ http localhost:8085/resevationHists/
             }
          );
     }  
-  ```
+```
+* 항공편 예약 Process가 정상 처리됨을 확인
+  1. Kafka Event 발생현황
+```
+[appuser@9d96d7441985 bin]$ ./kafka-console-consumer --bootstrap-server localhost:9092 --topic msaair  --from-beginning
+{"eventType":"ReservationCreated","timestamp":1678152483470,"reservationId":1,"peopleNo":3,"mileageToIncrease":10000,"scheduleId":2,"customerId":1}
+{"eventType":"Mileageincreased","timestamp":1678152483713,"customerId":1,"mileage":11000}\
+```
+  2. 이벤트 발생에 따른 고객알림 발생
+     notiMgmt에서 고객알림발송내역
+```     
+     고객번호:1 ,항공편 예약이 등록되었습니다. 예약번호:1
+     고객번호:1 ,마일리지가 신규 적립되었습니다. 잔여마일리지:11000
+```
+  3. 이벤트 발송에 따른 고객히스토리 생성내역(CQRS)
+```   
+gitpod /workspace/msaair (main) $ http localhost:8085/resevationHists/
+HTTP/1.1 200 
+Connection: keep-alive
+Content-Type: application/hal+json
+Date: Tue, 07 Mar 2023 01:46:39 GMT
+Keep-Alive: timeout=60
+Transfer-Encoding: chunked
+Vary: Origin
+Vary: Access-Control-Request-Method
+Vary: Access-Control-Request-Headers
+{
+    "_embedded": {
+        "resevationHists": [
+            {
+                "_links": {
+                    "resevationHist": {
+                        "href": "http://localhost:8085/resevationHists/1"
+                    },
+                    "self": {-
+                        "href": "http://localhost:8085/resevationHists/1"
+                    }
+                },
+                "customerId": 1,
+                "eventType": "예약등록",
+                "mileage": null,
+                "scheduleId": 2
+            },
+            {
+                "_links": {
+                    "resevationHist": {
+                        "href": "http://localhost:8085/resevationHists/2"
+                    },
+                    "self": {
+                        "href": "http://localhost:8085/resevationHists/2"
+                    }
+                },
+                "customerId": 1,
+                "eventType": "마일리지적립",
+                "mileage": 21000,
+                "scheduleId": null
+            }
+        ]
+    },
+    "_links": {
+        "profile": {
+            "href": "http://localhost:8085/profile/resevationHists"
+        },
+        "self": {
+            "href": "http://localhost:8085/resevationHists/"
+        }
+    },
+    "page": {
+        "number": 0,
+        "size": 20,
+        "totalElements": 2,
+        "totalPages": 1
+    }
+}
+```  
+
 
 ---
 # 운영
