@@ -676,13 +676,12 @@ openjdk                     8u212-jdk-alpine   a3562aa0b991   3 years ago   105M
 ```
 * deployment.yaml에 Readiness Probe 설정 확인 및 신규버젼으로 배포되도록 버젼 변경
 ```
+    spec
+      containers:
         - name: reservationmgmt
-          image: owljw/reservationmgmt:4
+          image: owljw/reservationmgmt:3
           ports:
             - containerPort: 8080
-          resources:
-            requests:
-              cpu: "200m"
           readinessProbe:
             httpGet:
               path: '/actuator/health'
@@ -692,20 +691,47 @@ openjdk                     8u212-jdk-alpine   a3562aa0b991   3 years ago   105M
             periodSeconds: 5
             failureThreshold: 10
 ```         
-* 배포중 siege를 통해 대상 서비스에 부하발생 처리 --> Availability 100% 확인
+* siege를 통해 대상 서비스에 부하발생 처리
+```
+root@siege:/# siege -c1 -t60S -v abc9cccd4c17d41af9bf9e37f59548a2-256813655.ap-southeast-2.elb.amazonaws.com:8080/reservations/ 
+HTTP/1.1 200     0.01 secs:     460 bytes ==> GET  /reservations/
+HTTP/1.1 200     0.02 secs:     460 bytes ==> GET  /reservations/
+HTTP/1.1 200     0.01 secs:     460 bytes ==> GET  /reservations/
+HTTP/1.1 200     0.02 secs:     460 bytes ==> GET  /reservations/
+HTTP/1.1 200     0.02 secs:     460 bytes ==> GET  /reservations/
+HTTP/1.1 200     0.01 secs:     460 bytes ==> GET  /reservations/
+```
+* 신규버젼으로 배포처리
+```
+gitpod /workspace/msaair/reservationmgmt (main) $ kubectl apply -f kubernetes/deployment.yaml
+deployment.apps/reservationmgmt configured
+gitpod /workspace/msaair/reservationmgmt (main) $ kubectl get pods -w
+NAME                               READY   STATUS    RESTARTS      AGE
+customermgmt-98c4cfcfc-82nk5       2/2     Running   7 (24m ago)   4h1m
+gateway-67977d88f8-ttr74           2/2     Running   0             3h39m
+my-kafka-0                         1/1     Running   0             6h50m
+my-kafka-zookeeper-0               1/1     Running   0             6h50m
+notimgmt-65d6c5bf45-cx5bw          2/2     Running   7 (23m ago)   3h27m
+reservationhist-574585f56d-npmtc   2/2     Running   7 (23m ago)   3h27m
+reservationmgmt-6dbf9c9449-mp2gh   2/2     Running   7 (23m ago)   4h18m
+reservationmgmt-76bc697969-fmcdj   1/2     Running   0             8s
+schedulemgmt-5f69f79b6f-x2fjk      2/2     Running   7 (23m ago)   3h26m
+siege                              1/1     Running   0             5h22m
+```
+* siege 최종 결과 확인 --> Availability 100% 확인
 ```
 Lifting the server siege...
-Transactions:                  10548 hits
+Transactions:                   1386 hits
 Availability:                 100.00 %
-Elapsed time:                  39.74 secs
-Data transferred:               4.63 MB
-Response time:                  0.07 secs
-Transaction rate:             265.43 trans/sec
-Throughput:                     0.12 MB/sec
-Concurrency:                   17.30
-Successful transactions:       10548
+Elapsed time:                  59.02 secs
+Data transferred:               0.61 MB
+Response time:                  0.04 secs
+Transaction rate:              23.48 trans/sec
+Throughput:                     0.01 MB/sec
+Concurrency:                    0.92
+Successful transactions:        1386
 Failed transactions:               0
-Longest transaction:            0.63
+Longest transaction:            0.87
 Shortest transaction:           0.01
 ```
 ---
