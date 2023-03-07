@@ -130,7 +130,8 @@ Customer|inquiry reservations|예약정보를 본다.
 Customer|inquery mileage|고객이 마일리지를 조회한다.
 Customer|inquery history|고객이 예약,예약취소,마일리지적립기록등의 모든 history를 조회한다.
 
-### Bounded Context|설명|비고
+### Bounded Context
+Bounded Context|설명|비고
 :---|:---|:---
 scheduleMgmt|항공편 일정 관리|
 reservationMgmt|항공편 예약 관리|
