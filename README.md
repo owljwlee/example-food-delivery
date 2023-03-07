@@ -557,6 +557,7 @@ Vary: Access-Control-Request-Headers
     }  
 ```
 * 처리결과
+```
 gitpod /workspace/msaair (main) $ http localhost:8085/resevationHists/
 HTTP/1.1 200 
 Connection: keep-alive
@@ -616,8 +617,6 @@ Vary: Access-Control-Request-Headers
     }
 }
 ```
-
-
 ---
 # 운영
 항목|구현여부|비고
