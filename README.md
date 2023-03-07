@@ -798,7 +798,7 @@ Concurrency:		       96.02
 배포기간 동안 Availability 가 변화없기 때문에 무정지 재배포가 성공한 것으로 확인됨.
 
 ### Gateway ###
-**Gateway 배포 및 External IP 확인**
+* **Gateway 배포 및 External IP 확인**
 ```
 gitpod /workspace/msaair (main) $ kubectl get pods
 NAME                               READY   STATUS    RESTARTS      AGE
@@ -826,8 +826,8 @@ reservationmgmt               ClusterIP      10.100.34.24     <none>            
 schedulemgmt                  ClusterIP      10.100.236.254   <none>                                                                        8080/TCP    
 ```
 
-**Gateway를 서비스 접급 정상처리 확인**
-
+* **Gateway를 서비스 접급 정상처리 확인**
+![image](https://hhttps://user-images.githubusercontent.com/24615790/223391959-32259257-0bdd-4c1b-85cc-2dc43d55f0fc.png)
 
 ### Autoscale (HPA) ###
 성수기에는 영역
@@ -836,7 +836,7 @@ schedulemgmt                  ClusterIP      10.100.236.254   <none>            
 
 ### Persistence Volume/ConfigMap/Secret
 
-**persistent volume**
+* **persistent volume**
 ```
 gitpod /workspace/msaair (main) $ kubectl get pv
 NAME                                       CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM                                                 STORAGECLASS   REASON   AGE
@@ -845,7 +845,8 @@ pvc-315b6349-78cd-4d8d-aa03-26095682a9b3   8Gi        RWO            Delete     
 pvc-8f4eb224-ccdb-48d6-b88c-dd9369f2351f   30Gi       RWO            Delete           Bound    logging/elasticsearch-master-elasticsearch-master-0   gp2                     125m
 pvc-b4b4a929-a4da-46b1-93b7-d6c4bff4a0d6   8Gi        RWO            Delete           Bound    default/data-my-kafka-zookeeper-0                     gp2                     4h4m
 ```
-**persistent volume claim**
+
+* **persistent volume claim**
 ```
 gitpod /workspace/msaair (main) $ kubectl get pvc
 NAME                        STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   AGE
@@ -854,7 +855,7 @@ data-my-kafka-0             Bound    pvc-315b6349-78cd-4d8d-aa03-26095682a9b3   
 data-my-kafka-zookeeper-0   Bound    pvc-b4b4a929-a4da-46b1-93b7-d6c4bff4a0d6   8Gi        RWO            gp2            4h6m
 ```
 
-**mount to schedulemgmt**
+* **mount to schedulemgmt**
 ```
 gitpod /workspace/msaair (main) $ kubectl describe deployment schedulemgmt
 Name:                   schedulemgmt
