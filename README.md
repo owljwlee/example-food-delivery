@@ -280,7 +280,7 @@ public class Reservation  {
     }
 }
 ```
-* Entity Pattern 과 Repository Pattern 을 적용하여 JPA 를 통하여 다양한 데이터소스 유형 (RDB or NoSQL) 에 대한 별도의 처리가 없도록 데이터 접근 어댑터를 자동 생성하기 위하여 Spring Data REST 의 RestRepository 를 적용하였다
+* 데이터 접근 어댑터를 자동 생성하기 위하여 Spring Data REST 의 RestRepository 를 적용하였다
 ```
 package msaair.domain;
 
@@ -315,18 +315,44 @@ http localhost:8085/resevationHists/
   * MSA Air에 등록된 항공편에 대해서만 예약이 가능하다.
 * 호출 프로토콜은 이미 앞서 Rest Repository 에 의해 노출되어있는 REST 서비스를 FeignClient 를 이용하여 호출한다. 
 ```
-# (app) 결제이력Service.java
+  Reservation.java의 동기식 호출 부분
+  
+    @PrePersist 
+    public void onPrePersist() {
+        // Check if The input schedule id exists
+        try {
+          msaair.external.Schedule schedule = ReservationmgmtApplication.applicationContext.getBean(msaair.external.ScheduleService.class).getSchedule(
+            getScheduleId()
+        );
+        } catch(Exception ex) {
+            throw new RuntimeException("Schedule id isn't existed");
+        }
 
-package fooddelivery.external;
-
-@FeignClient(name="pay", url="http://localhost:8082")//, fallback = 결제이력ServiceFallback.class)
-public interface 결제이력Service {
-
-    @RequestMapping(method= RequestMethod.POST, path="/결제이력s")
-    public void 결제(@RequestBody 결제이력 pay);
-
-}
+        // Check if the customer exists
+        try {
+          msaair.external.Mileage mileage = ReservationmgmtApplication.applicationContext.getBean(msaair.external.MileageService.class).getMileage(
+            getCustomerId()
+        );
+        } catch(Exception ex){
+            throw new RuntimeException("non-existed customer");           
+        }
+    }
 ```
+```
+  @FeignClient(name = "customermgmt", url = "${api.url.customermgmt}")
+  public interface MileageService {
+    @RequestMapping(method = RequestMethod.GET, path = "/mileages/{customerId}")
+    public Mileage getMileage(@PathVariable("customerId") Long customerId);
+  }
+  
+  @FeignClient(name = "customermgmt", url = "${api.url.customermgmt}")
+  public interface MileageService {
+    @RequestMapping(method = RequestMethod.GET, path = "/mileages/{customerId}")
+    public Mileage getMileage(@PathVariable("customerId") Long customerId);
+  }
+****
+```
+
 
 - 주문을 받은 직후(@PostPersist) 결제를 요청하도록 처리
 ```
