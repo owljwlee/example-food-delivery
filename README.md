@@ -977,9 +977,62 @@ Events:          <none>
 ```
 ---
 ### Apply Service Mesh : istio-gateway ###
+* istio 설치
+```
+gitpod /workspace/msaair (main) $ kubectl get namespace
+NAME              STATUS   AGE
+default           Active   23h
+istio-system      Active   17h
+kube-node-lease   Active   23h
+kube-public       Active   23h
+kube-system       Active   23h
+logging           Active   17h
+monitoring        Active   17h
+```
+* Microservice가 설치된 namespace(default)의 istio-enabled 설정
+```
+gitpod /workspace/msaair (main) $ kubectl get namespace -o yaml
+apiVersion: v1
+items:
+- apiVersion: v1
+  kind: Namespace
+  metadata:
+    creationTimestamp: "2023-03-07T00:23:49Z"
+    labels:
+      istio-injection: enabled
+      kubernetes.io/metadata.name: default
+    name: default
+    resourceVersion: "80662"
+    uid: 2c26c9e7-7936-4791-b658-f0eaebf8ea0e
+```
+* pod 재기동후 sidecar injection 확인
+```
+itpod /workspace/msaair (main) $ kubectl get pod reservationmgmt-76bc697969-fmcdj -o yaml
+apiVersion: v1
+kind: Pod
+metadata:
+  annotations:
+    kubectl.kubernetes.io/default-container: reservationmgmt
+    kubectl.kubernetes.io/default-logs-container: reservationmgmt
+    kubernetes.io/psp: eks.privileged
+    prometheus.io/path: /stats/prometheus
+    prometheus.io/port: "15020"
+    prometheus.io/scrape: "true"
+    sidecar.istio.io/status: '{"initContainers":["istio-init"],"containers":["istio-proxy"],"volumes":["workload-socket","workload-certs","istio-envoy","istio-data","istio-podinfo","istio-token","istiod-ca-cert"],"imagePullSecrets":null,"revision":"default"}'
+  creationTimestamp: "2023-03-07T11:14:26Z"
+  generateName: reservationmgmt-76bc697969-
+  labels:
+    app: reservationmgmt
+    pod-template-hash: 76bc697969
+    security.istio.io/tlsMode: istio
+    service.istio.io/canonical-name: reservationmgmt
+    service.istio.io/canonical-revision: latest
+  name: reservationmgmt-76bc697969-fmcdj
+  namespace: default
+  ownerReferences:
+```
 
-istio 설치후, Microservice가 설치된 namespace(default)의 istio-enabled 설정후 재기동 수행
-재기동 후 sidecar 정상 탑재확인
+* 모든 pod 재기동 후 kiali에서 sidecar 정상 탑재확인
 ![image](https://user-images.githubusercontent.com/24615790/223364367-b316a6a9-b4be-4aa1-b9dd-0f929d5c81a8.png)
 
 ---
