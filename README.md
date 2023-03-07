@@ -119,7 +119,26 @@ name|역할|비고
 AirFlightMgr|항공편관리자
 Customer|고객
 
-### Event pub/sub 관계 도출
+### Command 도출
+Stakeholder|command|기능
+:---|:---|:---
+AirFlightMgr|create schedule|항공편 일정을 등록한다.
+AirFlightMgr|delete schedule|항공편 일정을 취소한다.
+Customer|create reservation|항공편을 예약한다.
+Customer|delete reservation|예약한 항공편을 취소한다.
+Customer|inquiry reservations|예약정보를 본다.
+Customer|inquery mileage|고객이 마일리지를 조회한다.
+Customer|inquery history|고객이 예약,예약취소,마일리지적립기록등의 모든 history를 조회한다.
+
+### Bounded Context|설명|비고
+:---|:---|:---
+scheduleMgmt|항공편 일정 관리|
+reservationMgmt|항공편 예약 관리|
+customerMgmt|고객 mileage 적립관리|
+notiMgmt|고객알림 관리|
+reservationhist|history 관리|
+
+### Event 도출 및 Event와 Bounded Context간 pub/sub 관계 도출
 Event Name|scheduleMgmt|reservationMgmt|customerMgmt|notiMgmt|reservationhist|
 :---|:---|:---|:---|:---|:---
 ReservationCreated||Pub.|Sub.|Sub.|Sub.
@@ -166,20 +185,31 @@ MileageDecreased|||Pub.|Sub.|Sub.
 
 # 구현:
 
-분석/설계 단계에서 도출된 헥사고날 아키텍처에 따라, 각 BC별로 대변되는 마이크로 서비스들을 스프링부트와 파이선으로 구현하였다. 구현한 각 서비스를 로컬에서 실행하는 방법은 아래와 같다 (각자의 포트넘버는 8081 ~ 808n 이다)
+분석/설계 단계에서 도출된 헥사고날 아키텍처에 따라, 각 BC별로 대변되는 마이크로 서비스들을 스프링부트로 구현하였다.
+microService name|comment|dir.|할당 port
+:---|:---|:---|:--
+schedulemgmt|항공편 일정 관리|schedulemgmt|8081
+reservationmgmt|항공편 예약 관리|reservationmgmt|8083
+customermgmt|고객 mileage 적립관리|customermgmt|8082
+notimgmt|고객알림 관리|notimgmt|8084
+reservationhist|history 관리|reservationhist8085
 
+각 서비스를 로컬에서 수행하는 방법
 ```
-cd app
+cd schedulemgmt
 mvn spring-boot:run
 
-cd pay
+cd reservationmgmt
 mvn spring-boot:run 
 
-cd store
+cd customermgmt
 mvn spring-boot:run  
 
-cd customer
-python policy-handler.py 
+cd notimgmt
+mvn spring-boot:run 
+
+cd reservationhis
+mvn spring-boot:run 
 ```
 
 ## DDD 의 적용
