@@ -223,49 +223,63 @@ mvn spring-boot:run
 
 ## DDD 의 적용
 
-- 각 서비스내에 도출된 핵심 Aggregate Root 객체를 Entity 로 선언하였다: (예시는 pay 마이크로 서비스). 이때 가능한 현업에서 사용하는 언어 (유비쿼터스 랭귀지)를 그대로 사용하려고 노력했다. 하지만, 일부 구현에 있어서 영문이 아닌 경우는 실행이 불가능한 경우가 있기 때문에 계속 사용할 방법은 아닌것 같다. (Maven pom.xml, Kafka의 topic id, FeignClient 의 서비스 id 등은 한글로 식별자를 사용하는 경우 오류가 발생하는 것을 확인하였다)
-
+* 각 서비스내에 도출된 핵심 Aggregate Root 객체를 Entity 로 선언처리(아래 예시는 reservation이다)
 ```
-package fooddelivery;
-
-import javax.persistence.*;
-import org.springframework.beans.BeanUtils;
-import java.util.List;
-
 @Entity
-@Table(name="결제이력_table")
-public class 결제이력 {
-
+@Table(name="Reservation_table")
+@Data
+public class Reservation  {  
     @Id
     @GeneratedValue(strategy=GenerationType.AUTO)
-    private Long id;
-    private String orderId;
-    private Double 금액;
+    private Long reservationId;
 
-    public Long getId() {
-        return id;
+    private Long customerId;    
+    
+    private Integer peopleNo;
+    
+    private Integer mileageToIncrease;
+    
+    private Long scheduleId;
+
+    @PrePersist 
+    public void onPrePersist() {
+        // Check if The input schedule id exists
+        try {
+        msaair.external.Schedule schedule = ReservationmgmtApplication.applicationContext.getBean(msaair.external.ScheduleService.class).getSchedule(
+            getScheduleId()
+        );
+        } catch(Exception ex) {
+            throw new RuntimeException("Schedule id isn't existed");
+        }
+
+        // Check if the customer exists
+        try {
+        // Get request from Mileage
+        msaair.external.Mileage mileage = ReservationmgmtApplication.applicationContext.getBean(msaair.external.MileageService.class).getMileage(
+            getCustomerId()
+        );
+        } catch(Exception ex){
+            throw new RuntimeException("non-existed customer");           
+        }
     }
 
-    public void setId(Long id) {
-        this.id = id;
-    }
-    public String getOrderId() {
-        return orderId;
-    }
-
-    public void setOrderId(String orderId) {
-        this.orderId = orderId;
-    }
-    public Double get금액() {
-        return 금액;
+    @PostPersist
+    public void onPostPersist(){
+        ReservationCreated reservationCreated = new ReservationCreated(this);
+        reservationCreated.publishAfterCommit();
     }
 
-    public void set금액(Double 금액) {
-        this.금액 = 금액;
+    @PreRemove
+    public void onPreRemove() {
+        ReservationCancelled reservationCancelled = new ReservationCancelled(this);
+        reservationCancelled.publishAfterCommit();
     }
 
+    public static ReservationRepository repository(){
+        ReservationRepository reservationRepository = ReservationmgmtApplication.applicationContext.getBean(ReservationRepository.class);
+        return reservationRepository;
+    }
 }
-
 ```
 - Entity Pattern 과 Repository Pattern 을 적용하여 JPA 를 통하여 다양한 데이터소스 유형 (RDB or NoSQL) 에 대한 별도의 처리가 없도록 데이터 접근 어댑터를 자동 생성하기 위하여 Spring Data REST 의 RestRepository 를 적용하였다
 ```
@@ -512,54 +526,10 @@ Deploy/Pipeline|Y|• Image를 생성하여 docker.io에 push<br>• docker.io�
 Autoscale (HPA)|Y|• 특정 Service(reservationmgmt)에 대해서 AutoScale 설정<br>• 트래픽 과다발생시 scale out 확인
 Self-healing|Y|• Liveness probe 설정하여 배포<br>• HttpGet ProbeAction을 통해 Liveness 값 반환 확인 
 Zero-downtime deploy|Y|• Readiness probe 설정하여 배포<br>• 신규버젼 배포시 무정지 배포 확인
-Persistence Volume/ConfigMap/Secret|Y|
+Persistence Volume/ConfigMap/Secret|Y|• 생성후 서비스 마운트 처리
 Apply Service Mesh|Y|• Micro service들이 배포된 namespace에 Initio-enabled 처리<br>• Micro service 재기동하여 sidecar injection 처리
 Loggregation / Monitoring|Y|EFK stack 설치하여, 로그모니터링 처리
 
-## CI/CD 설정
-
-
-각 구현체들은 각자의 source repository 에 구성되었고, 사용한 CI/CD 플랫폼은 GCP를 사용하였으며, pipeline build script 는 각 프로젝트 폴더 이하에 cloudbuild.yml 에 포함되었다.
-
-
-## 동기식 호출 / 서킷 브레이킹 / 장애격리
-
-* 서킷 브레이킹 프레임워크의 선택: Spring FeignClient + Hystrix 옵션을 사용하여 구현함
-
-시나리오는 단말앱(app)-->결제(pay) 시의 연결을 RESTful Request/Response 로 연동하여 구현이 되어있고, 결제 요청이 과도할 경우 CB 를 통하여 장애격리.
-
-- Hystrix 를 설정:  요청처리 쓰레드에서 처리시간이 610 밀리가 넘어서기 시작하여 어느정도 유지되면 CB 회로가 닫히도록 (요청을 빠르게 실패처리, 차단) 설정
-```
-# application.yml
-feign:
-  hystrix:
-    enabled: true
-    
-hystrix:
-  command:
-    # 전역설정
-    default:
-      execution.isolation.thread.timeoutInMilliseconds: 610
-
-```
-
-- 피호출 서비스(결제:pay) 의 임의 부하 처리 - 400 밀리에서 증감 220 밀리 정도 왔다갔다 하게
-```
-# (pay) 결제이력.java (Entity)
-
-    @PrePersist
-    public void onPrePersist(){  //결제이력을 저장한 후 적당한 시간 끌기
-
-        ...
-        
-        try {
-            Thread.currentThread().sleep((long) (400 + Math.random() * 220));
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-    }
-```
----
 
 ### Gateway ###
 * **Gateway 배포 및 External IP 확인**
