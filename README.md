@@ -353,7 +353,7 @@ http localhost:8085/resevationHists/
 ```
 ---
 ## Saga (Pub-Sub)
-* 항공편 예약 Processs는 다음 task들로 구서
+* 항공편 예약 Processs는 다음 task들로 구성
   1. 항공편예약:예약할 항공편을 조회하여 선택하여 결재
   2. 마일리지적립:항공편 결재에 따른 마일리지 적립
   3. 고객알림발송:고객에게 관련 사시 알림
@@ -616,6 +616,28 @@ Vary: Access-Control-Request-Headers
         "totalPages": 1
     }
 }
+```
+---
+##Compensation
+* `항공편 예약`건을 취소시, 이에 따라 `항공편 예약`으로 적립된 마일리지도 취소처리되어야 한다.
+* '항공편 예약 취소' Event 발생시, 이를 Sub.하여 마일리지 취소처리가 발생하도록 구현
+```
+    public static void cancelMileage(ReservationCancelled reservationCancelled){
+        /** Example 2:  finding and process*/
+        repository().findById(reservationCancelled.getCustomerId()).ifPresent(mileage->{
+	    //항공편 예약 취소에 딸 마일리지를 차감한다.
+            mileage.setMileage(mileage.getMileage() - reservationCancelled.getMileageToIncrease() );
+            repository().save(mileage);
+	    
+	    //마일리지 차감 이벤트를 새로 발생시킨다.
+            Mileage aMileage = new Mileage();
+            aMileage.setCustomerId(mileage.getCustomerId());
+            aMileage.setMileage(mileage.getMileage());
+            MileageDecreased mileageDecreased = new MileageDecreased(aMileage);
+            mileageDecreased.publishAfterCommit();
+         });
+    }
+
 ```
 ---
 # 운영
