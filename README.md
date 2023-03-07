@@ -787,6 +787,66 @@ Concurrency:		       96.02
 
 배포기간 동안 Availability 가 변화없기 때문에 무정지 재배포가 성공한 것으로 확인됨.
 
+### Persistence Volume/ConfigMap/Secret
+
+**persistent volume**
+```
+gitpod /workspace/msaair (main) $ kubectl get pv
+NAME                                       CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM                                                 STORAGECLASS   REASON   AGE
+air-volume                                 1Gi        RWX            Recycle          Bound    default/air-claim                                     gp2                     154m
+pvc-315b6349-78cd-4d8d-aa03-26095682a9b3   8Gi        RWO            Delete           Bound    default/data-my-kafka-0                               gp2                     4h4m
+pvc-8f4eb224-ccdb-48d6-b88c-dd9369f2351f   30Gi       RWO            Delete           Bound    logging/elasticsearch-master-elasticsearch-master-0   gp2                     125m
+pvc-b4b4a929-a4da-46b1-93b7-d6c4bff4a0d6   8Gi        RWO            Delete           Bound    default/data-my-kafka-zookeeper-0                     gp2                     4h4m
+```
+**persistent volume claim**
+```
+gitpod /workspace/msaair (main) $ kubectl get pvc
+NAME                        STATUS   VOLUME                                     CAPACITY   ACCESS MODES   STORAGECLASS   AGE
+air-claim                   Bound    air-volume                                 1Gi        RWX            gp2            153m
+data-my-kafka-0             Bound    pvc-315b6349-78cd-4d8d-aa03-26095682a9b3   8Gi        RWO            gp2            4h6m
+data-my-kafka-zookeeper-0   Bound    pvc-b4b4a929-a4da-46b1-93b7-d6c4bff4a0d6   8Gi        RWO            gp2            4h6m
+```
+
+**mount to schedulemgmt**
+```
+gitpod /workspace/msaair (main) $ kubectl describe deployment schedulemgmt
+Name:                   schedulemgmt
+Namespace:              default
+CreationTimestamp:      Tue, 07 Mar 2023 03:54:18 +0000
+Labels:                 app=schedulemgmt
+Annotations:            deployment.kubernetes.io/revision: 2
+Selector:               app=schedulemgmt
+Replicas:               1 desired | 1 updated | 1 total | 1 available | 0 unavailable
+StrategyType:           RollingUpdate
+MinReadySeconds:        0
+RollingUpdateStrategy:  25% max unavailable, 25% max surge
+Pod Template:
+  Labels:  app=schedulemgmt
+  Containers:
+   schedulemgmt:
+    Image:        owljw/schedulemgmt:1
+    Port:         8080/TCP
+    Host Port:    0/TCP
+    Liveness:     http-get http://:8080/actuator/health delay=120s timeout=2s period=5s #success=1 #failure=5
+    Readiness:    http-get http://:8080/actuator/health delay=10s timeout=2s period=5s #success=1 #failure=10
+    Environment:  <none>
+    Mounts:
+      /tmp/air from air-volume (rw)
+  Volumes:
+   air-volume:
+    Type:       PersistentVolumeClaim (a reference to a PersistentVolumeClaim in the same namespace)
+    ClaimName:  air-claim
+    ReadOnly:   false
+Conditions:
+  Type           Status  Reason
+  ----           ------  ------
+  Progressing    True    NewReplicaSetAvailable
+  Available      True    MinimumReplicasAvailable
+OldReplicaSets:  <none>
+NewReplicaSet:   schedulemgmt-5f69f79b6f (1/1 replicas created)
+Events:          <none>
+```
+
 ### Apply Service Mesh : istio-gateway
 istio 설치후, Microservice가 설치된 namespace(default)의 istio-enabled 설정후 재기동 수행
 재기동 후 sidecar 정상 탑재확인
