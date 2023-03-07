@@ -787,6 +787,12 @@ Concurrency:		       96.02
 
 배포기간 동안 Availability 가 변화없기 때문에 무정지 재배포가 성공한 것으로 확인됨.
 
+### Apply Service Mesh : istio-gateway
+istio 설치후, Microservice가 설치된 namespace(default)의 istio-enabled 설정후 재기동 수행
+재기동 후 sidecar 정상 탑재확인
+![image](https://user-images.githubusercontent.com/24615790/223364367-b316a6a9-b4be-4aa1-b9dd-0f929d5c81a8.png)
+
+
 ### Loggregation / Monitoring
 EFK stack 설치후 모니터링 수행
 ![image](https://user-images.githubusercontent.com/24615790/223363581-5ad19711-b855-4ee8-a03b-0052ad88c6a7.png)
